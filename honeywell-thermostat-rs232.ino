@@ -1,6 +1,6 @@
 // Firmware to turn a rotary thermostat smarter
 //
-// https://hackaday.io/project/170693-old-thermostat-learns-wifi-mqtt
+// https://hackaday.io/project/170693-old-thermostat-learns-new-tricks
 
 
 // Hardware GPIO pins
@@ -24,8 +24,8 @@ char message_buffer[20];
 int received_bytes = 0;
 bool debug = true;
 
-
-void setup() {
+void setup()
+{
     pinMode(LED, OUTPUT);
     pinMode(CONTACT, INPUT);
     contact_state = digitalRead(CONTACT);
@@ -36,7 +36,8 @@ void setup() {
     digitalWrite(LED, HIGH);
 }
 
-void init_encoder() {
+void init_encoder()
+{
     encoder_position = 0;
     uint8_t s = 0;
     if (digitalRead(ENCODER_A)) s |= 1;
@@ -44,12 +45,12 @@ void init_encoder() {
     encoder_state = s;
 }
 
-void loop() {
+void loop()
+{
     update_encoder_state();
     check_for_serial_data();
 
-    if (set_point!=encoder_position) {
-
+    if (set_point != encoder_position) {
         if (encoder_position < 0) {
             encoder_position = 0;
         } else if (encoder_position > 60) {
@@ -61,25 +62,27 @@ void loop() {
     }
 
     int new_contact_state = digitalRead(CONTACT);
-    if(new_contact_state != contact_state){
+    if (new_contact_state != contact_state) {
         contact_state = new_contact_state;
         print_state();
     }
 }
 
-void print_state(){
+void print_state()
+{
     digitalWrite(LED, LOW);
-    if(contact_state) {
-      Serial1.print("I");
+    if (contact_state) {
+        Serial1.print("I");
     } else {
-      Serial1.print("H");
+        Serial1.print("H");
     }
 
     Serial1.println(set_point);
     digitalWrite(LED, HIGH);
 }
 
-void check_for_serial_data() {
+void check_for_serial_data()
+{
     if (Serial1.available() <= 0) {
         return;
     }
@@ -91,7 +94,7 @@ void check_for_serial_data() {
         received_bytes = 0;
     }
 
-    if (incoming_byte=='\r') {
+    if (incoming_byte == '\r') {
         message_buffer[received_bytes++] = '\0';
         parse_received_command();
         received_bytes = 0;
@@ -100,7 +103,8 @@ void check_for_serial_data() {
     }
 }
 
-void parse_received_command() {
+void parse_received_command()
+{
     int set_point_request = atoi(message_buffer);
 
     if (message_buffer[0] < '0' || message_buffer[0] > '9' || set_point_request < 0 || set_point_request > 60) {
@@ -113,20 +117,23 @@ void parse_received_command() {
     drive_encoder_to_value(set_point_request);
 }
 
-void set_encoder_phase(int phase) {
+void set_encoder_phase(int phase)
+{
     int new_state = encoder_states_by_phase[phase];
 
     digitalWrite(ENCODER_A, (new_state >> 1) & 1);
     digitalWrite(ENCODER_B, new_state & 1);
 }
 
-int get_encoder_phase() {
+int get_encoder_phase()
+{
     int state = (digitalRead(ENCODER_A) << 1) | digitalRead(ENCODER_B);
 
     return encoder_phases_by_state[state];
 }
 
-void drive_encoder_to_value(unsigned int requested_set_point) {
+void drive_encoder_to_value(unsigned int requested_set_point)
+{
     // Set the encoder pins to OUTPUT, preserving state
     int phase = get_encoder_phase();
     pinMode(ENCODER_B, OUTPUT);
@@ -135,9 +142,9 @@ void drive_encoder_to_value(unsigned int requested_set_point) {
 
     // Move CCW, enough to overflow but leaving the phase in such way that
     // going later to the set point will result in the phase unchanged.
-    int reset_steps = 80 + (requested_set_point%4);
+    int reset_steps = 80 + (requested_set_point % 4);
     for (int i = 0; i < reset_steps; i++) {
-        phase = (phase + 3)%4;
+        phase = (phase + 3) % 4;
         set_encoder_phase(phase);
         delay(ENCODER_DELAY);
     };
@@ -146,7 +153,7 @@ void drive_encoder_to_value(unsigned int requested_set_point) {
     // be the same as it was before resetting, matching the state
     // of the real encoder switches.
     for (int i = 0; i < requested_set_point; i++) {
-        phase = (phase + 1)%4;
+        phase = (phase + 1) % 4;
         set_encoder_phase(phase);
         delay(ENCODER_DELAY);
     }
@@ -159,7 +166,8 @@ void drive_encoder_to_value(unsigned int requested_set_point) {
     encoder_position = requested_set_point;
 }
 
-void update_encoder_state() {
+void update_encoder_state()
+{
     /*
         new new old old
         B   A   B   A   result
@@ -191,21 +199,21 @@ void update_encoder_state() {
     encoder_state = (state >> 2);
 
     switch (state) {
-        case 1:
-        case 7:
-        case 8:
-        case 14:encoder_position++;
-            return;
-        case 2:
-        case 4:
-        case 11:
-        case 13:encoder_position--;
-            return;
-        case 3:
-        case 12:encoder_position += 2;
-            return;
-        case 6:
-        case 9:encoder_position -= 2;
-            return;
+    case 1:
+    case 7:
+    case 8:
+    case 14:encoder_position++;
+        return;
+    case 2:
+    case 4:
+    case 11:
+    case 13:encoder_position--;
+        return;
+    case 3:
+    case 12:encoder_position += 2;
+        return;
+    case 6:
+    case 9:encoder_position -= 2;
+        return;
     }
 }
